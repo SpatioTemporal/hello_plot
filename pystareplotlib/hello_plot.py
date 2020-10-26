@@ -111,8 +111,7 @@ deg = 1 # Unit of angle
 proj         = ccrs.Mollweide()
 transf       = ccrs.Geodetic()
 plot_options = {'projection':proj,'transform':transf}
-
-default_dpi = mpl.rcParamsDefault['figure.dpi']
-mpl.rcParams['figure.dpi'] = 1.5*default_dpi
-
 set_global   = True
+
+# default_dpi = mpl.rcParamsDefault['figure.dpi']
+# mpl.rcParams['figure.dpi'] = 1.5*default_dpi
