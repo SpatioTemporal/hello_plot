@@ -252,6 +252,9 @@ class stare_prism(object):
     def __init__(self
                  ,siv=None
                  ,tiv=None
+                 ,tiv_representation=None
+                 ,tiv_scale=None
+                 ,tiv_offset=None
                  ,color_reverse=None
                  ,color=None
                  ,color_forward=None
@@ -259,11 +262,22 @@ class stare_prism(object):
                  ):
         self.siv = (None if siv is None else siv)
         self.tiv_mock = ([0.0,0.33,0.67,1.0] if tiv_mock is True else tiv_mock)
+
+        tiv_scale = 86400.0e+3 if tiv_scale  is None else tiv_scale  # Scale to a day from ms.
+        tiv_offset= 0          if tiv_offset is None else tiv_offset # In days, by default
+
+        tiv_representation = 'ms' if tiv_representation is None else tiv_representation
+        if tiv_representation != 'ms' or tiv_representation != 'tai':
+            raise ValueError("tiv_representation neither 'ms' nor 'tail'.")
+
         
         if tiv_mock is None:
             self.tiv = (None if tiv is None else tiv)
         else:
             self.tiv = self.tiv_mock
+
+        Convert tiv to TAI or MS triples, i.e. lb,tai,ub or lb,tai,ub, where lb & ub lower, upper bound, resp.
+
             
         self.lons, self.lats, self.intmat = pystare.triangulate_indices([self.siv])
         
