@@ -260,24 +260,41 @@ class stare_prism(object):
                  ,color_forward=None
                  ,tiv_mock=None
                  ):
-        self.siv = (None if siv is None else siv)
+        self.siv      = (None if siv is None else siv)
+        self.tiv      = None if tiv is None else tiv
         self.tiv_mock = ([0.0,0.33,0.67,1.0] if tiv_mock is True else tiv_mock)
 
-        tiv_scale = 86400.0e+3 if tiv_scale  is None else tiv_scale  # Scale to a day from ms.
+        tiv_scale = 1          if tiv_scale  is None else tiv_scale  # Scale to a day
         tiv_offset= 0          if tiv_offset is None else tiv_offset # In days, by default
 
-        tiv_representation = 'ms' if tiv_representation is None else tiv_representation
-        if tiv_representation != 'ms' or tiv_representation != 'tai':
-            raise ValueError("tiv_representation neither 'ms' nor 'tail'.")
-
+        tiv_representation = 'tai' if tiv_representation is None else tiv_representation
         
-        if tiv_mock is None:
-            self.tiv = (None if tiv is None else tiv)
+        if tiv_representation not in ['ms','tai','ms-utc']:
+            raise ValueError("tiv_representation not 'ms', 'tai', nor 'ms-utc'.")
+
+        if tiv_mock is not None:
+            self.tiv_plot = self.tiv_mock
         else:
-            self.tiv = self.tiv_mock
-
-        Convert tiv to TAI or MS triples, i.e. lb,tai,ub or lb,tai,ub, where lb & ub lower, upper bound, resp.
-
+            if tiv_representation == 'tai':
+                triple   = numpy.concatenate(pystare.to_temporal_triple_tai(self.tiv))
+                print(triple)
+                print(type(triple))
+                t_triple = pystare.to_JulianTAI(triple)
+            elif tiv_representation =='ms': 
+                triple = numpy.concatenate(pystare.to_temporal_triple_ms(self.tiv))
+                t_triple = pystare.to_JulianTAI(triple)
+            else: # 'ms-utc'
+                triple = numpy.concatenate(pystare.to_temporal_triple_ms(self.tiv))
+                t_triple = pystare.to_JulianUTC(triple)
+    
+            self.t_lo = ( t_triple[0][0] + t_triple[1][0] ) / tiv_scale + tiv_offset
+            self.t_mi = ( t_triple[0][1] + t_triple[1][1] ) / tiv_scale + tiv_offset
+            self.t_hi = ( t_triple[0][2] + t_triple[1][2] ) / tiv_scale + tiv_offset
+    
+            alpha = 0.25
+            dtlo = self.t_mi - self.t_lo
+            dthi = self.t_hi - self.t_mi
+            self.tiv_plot=[self.t_lo,self.t_mi-alpha*dtlo,self.t_mi+alpha*dthi,self.t_hi]
             
         self.lons, self.lats, self.intmat = pystare.triangulate_indices([self.siv])
         
@@ -316,7 +333,7 @@ class stare_prism(object):
                    ,prism_edge_color = prism_edge_color
                    ,alpha      = alpha
                    ,edge_alpha = edge_alpha                   
-                   ,z=[self.tiv[0],self.tiv[-1]]
+                   ,z=[self.tiv_plot[0],self.tiv_plot[-1]]
                    ,end_faces_plot = [end_faces_plot[0],end_faces_plot[-1]]
                   )
 
@@ -342,7 +359,7 @@ class stare_prism(object):
                    ,prism_edge_color = prism_edge_color
                    ,alpha      = alpha
                    ,edge_alpha = edge_alpha
-                   ,z=self.tiv[0:2]
+                   ,z=self.tiv_plot[0:2]
                    ,end_faces_plot = end_faces_plot[0:2]
                   )
         self.plot0(figax
@@ -351,7 +368,7 @@ class stare_prism(object):
                    ,prism_edge_color = prism_edge_color
                    ,alpha      = alpha
                    ,edge_alpha = edge_alpha
-                   ,z=self.tiv[1:3]
+                   ,z=self.tiv_plot[1:3]
                    ,end_faces_plot = end_faces_plot[2:4]
                   )
         self.plot0(figax
@@ -360,7 +377,7 @@ class stare_prism(object):
                    ,prism_edge_color = prism_edge_color
                    ,alpha      = alpha
                    ,edge_alpha = edge_alpha
-                   ,z=self.tiv[2:4]
+                   ,z=self.tiv_plot[2:4]
                    ,end_faces_plot = end_faces_plot[4:6]
                   )
         
@@ -387,8 +404,8 @@ class stare_prism(object):
         end_faces_plot = ([True,True] if end_faces_plot is None else end_faces_plot)
         dbg        = (False if dbg is None else dbg)
         
-        # z0=self.tiv[0] # bad
-        # temporal_scales = [self.tiv[1]]*4
+        # z0=self.tiv_plot[0] # bad
+        # temporal_scales = [self.tiv_plot[1]]*4
         
         z0_ = z[0]
         z1_ = [z[1]]
