@@ -43,9 +43,9 @@ def make_stare_htm_info_from_sivs(sivs,dask=None):
     tiv = pystare.current_datetime()
     return xarray.Dataset(
         {
-            "lons":    lons
-            ,"lats":   lats
-            ,"intmat":intmat
+            "lons"     : lons
+            ,"lats"    : lats
+            ,"intmat"  : intmat
         }
         ,attrs = {
             "creator"          : "make_stare_htm_info_at_level v1"
@@ -55,6 +55,49 @@ def make_stare_htm_info_from_sivs(sivs,dask=None):
     )
 
 #
+
+###########################################################################
+# https://stackoverflow.com/questions/41596386/tripcolor-using-rgb-values-for-each-vertex
+#
+def colors_to_cmap(colors):
+    '''
+    colors_to_cmap(nx3_or_nx4_rgba_array) yields a matplotlib colormap object that, when
+    that will reproduce the colors in the given array when passed a list of n evenly
+    spaced numbers between 0 and 1 (inclusive), where n is the length of the argument.
+
+    Example:
+      cmap = colors_to_cmap(colors)
+      zs = numpy.asarray(range(len(colors)), dtype=numpy.float) / (len(colors)-1)
+      # cmap(zs) should reproduce colors; cmap[zs[i]] == colors[i]
+    '''
+    colors = numpy.asarray(colors)
+    if colors.shape[1] == 3:
+        colors = numpy.hstack((colors, numpy.ones((len(colors),1))))
+    steps = (0.5 + numpy.asarray(range(len(colors)-1), dtype=numpy.float))/(len(colors) - 1)
+    return mpl.colors.LinearSegmentedColormap(
+        'auto_cmap',
+        {clrname: ([(0, col[0], col[0])] + 
+                   [(step, c0, c1) for (step,c0,c1) in zip(steps, col[:-1], col[1:])] + 
+                   [(1, col[-1], col[-1])])
+         for (clridx,clrname) in enumerate(['red', 'green', 'blue', 'alpha'])
+         for col in [colors[:,clridx]]},
+        N=len(colors))
+
+# https://stackoverflow.com/questions/765736/using-pil-to-make-all-white-pixels-transparent
+
+def make_transparent(img):
+    img = img.convert("RGBA")
+    datas = img.getdata()
+    newData = []
+    for item in datas:
+        if item[0] == 255 and item[1] == 255 and item[2] == 255:
+            newData.append((255, 255, 255, 0))
+        else:
+            newData.append(item)
+    img.putdata(newData)
+    return img
+
+#################################
 
 def sgn(x,y):
     dx01=x[1]-x[0]
@@ -110,6 +153,16 @@ def hello_plot(spatial_index_values=None
                , bbox_to_anchor=None
                , verbose=None
                , rasterized=None
+               , face_zs         = None
+#               , face_colors     = None
+               , face_edgecolors = None
+               , face_lw         = None
+               , face_vmin       = None
+               , face_vmax       = None
+               , face_cmap       = None
+               , face_shading    = None
+               , face_alpha      = None
+               , siv_triang      = None
               ):
     
     spatial_index_values = (None if spatial_index_values is None else spatial_index_values)
@@ -126,6 +179,19 @@ def hello_plot(spatial_index_values=None
     bbox_to_anchor = (None if bbox_to_anchor is None else bbox_to_anchor)
     verbose = (True if verbose is None else verbose)
     rasterized = (True if rasterized is None else rasterized)
+
+    face_zs         = None if face_zs is None else face_zs
+#    face_colors     = None if face_colors is None else face_colors
+    face_edgecolors = None if face_edgecolors is None else face_edgecolors
+    face_lw         = 0.5 if face_lw is None else face_lw
+    face_vmin       = None if face_vmin is None else face_vmin
+    face_vmax       = None if face_vmax is None else face_vmax
+    face_cmap       = None if face_cmap is None else face_cmap
+    face_shading    = 'gouraud' if face_shading is None else face_shading
+    face_alpha      = 0.75 if face_alpha is None else face_alpha
+
+    siv_triang = None if siv_triang is None else siv_triang
+    
 
     if figax is None:
         # Initialize the FigAxContainer the first time it is used
@@ -146,7 +212,8 @@ def hello_plot(spatial_index_values=None
         intmat = spatial_index_values.intmat.data
 
         # Make triangulation object & plot
-        siv_triang = tri.Triangulation(lons, lats, intmat)
+        if siv_triang is None:
+            siv_triang = tri.Triangulation(lons, lats, intmat)
 
         divert_stderr()
         if use_dash is not None:
@@ -155,6 +222,33 @@ def hello_plot(spatial_index_values=None
         else:
             figax.ax.triplot(siv_triang, c=color, transform=plot_options['transform'], lw=lw, 
                              label="Placeholder", rasterized=rasterized)
+            
+        if face_zs is not None:
+            print('face_zs         ',face_zs)
+#            print('face_colors     ',face_colors)
+            print('face_edgecolors ',face_edgecolors)
+            print('face_lw         ',face_lw)
+            print('face_shading    ',face_shading)
+            print('face_vmin       ',face_vmin)
+            print('face_vmax       ',face_vmax)
+            print('face_cmap       ',face_cmap)
+            print('face_alpha      ',face_alpha)
+            print('po transform    ',plot_options['transform'])
+            print('rasterized      ',rasterized)
+            
+            figax.ax.tripcolor(siv_triang
+                               ,face_zs
+#                               ,face_colors=face_colors
+                               ,edgecolors=face_edgecolors
+                               ,lw=face_lw
+                               ,shading=face_shading
+                               ,vmin=face_vmin
+                               ,vmax=face_vmax
+                               ,cmap=face_cmap
+                               ,alpha=face_alpha
+                               ,transform=plot_options['transform']
+                               ,rasterized=rasterized)
+
         restore_stderr(_verbose=verbose)
  
         # Add Legend
@@ -177,7 +271,7 @@ def hello_plot(spatial_index_values=None
         # Show figure now
         plt.show()
 
-    return figax,spatial_index_values
+    return figax,spatial_index_values,siv_triang
 
 def hex16(ival):
     return "0x%016x" % ival
