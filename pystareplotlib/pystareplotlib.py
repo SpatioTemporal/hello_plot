@@ -1,4 +1,6 @@
 
+
+
 import numpy
 import pystare
 
@@ -17,8 +19,42 @@ Image.MAX_IMAGE_PIXELS = None
 
 import xarray
 import sys
+from datetime import datetime
 
 # Some helper functions for plotting & printing.
+
+
+def make_stare_htm_info_from_sivs(sivs,dask=None):
+    "Make an xarray with all of the STARE htm-ids"
+    dask  = ( 'allowed' if dask is None else dask )
+    htm = xarray.DataArray(numpy.arange(len(sivs)), dims=("htm"),coords={"htm": sivs})
+
+    data1 = xarray.apply_ufunc(
+        pystare.triangulate_indices
+        ,htm.htm
+        ,input_core_dims=[["htm"]]
+        ,dask=dask
+    )
+
+    lons = xarray.DataArray(data1.data[()][0].reshape(len(htm),3),dims=("htm","vertex"),coords={"htm": sivs})
+    lats = xarray.DataArray(data1.data[()][1].reshape(len(htm),3),dims=("htm","vertex"),coords={"htm": sivs})
+    intmat = xarray.DataArray(data1.data[()][2],dims=("htm","vertex"),coords={"htm": sivs})
+
+    tiv = pystare.current_datetime()
+    return xarray.Dataset(
+        {
+            "lons":    lons
+            ,"lats":   lats
+            ,"intmat":intmat
+        }
+        ,attrs = {
+            "creator"          : "make_stare_htm_info_at_level v1"
+            ,"datetime"        : tiv
+            ,"datetime_string" : numpy.array(pystare.to_utc_approximate(tiv),dtype='datetime64[ms]')
+        }
+    )
+
+#
 
 def sgn(x,y):
     dx01=x[1]-x[0]
@@ -100,13 +136,14 @@ def hello_plot(spatial_index_values=None
             figax.ax.coastlines()
 
     if spatial_index_values is not None:
-        if isinstance(spatial_index_values,xarray.Dataset):
-            lons = spatial_index_values.lons.data.reshape(3*len(spatial_index_values.htm))
-            lats = spatial_index_values.lats.data.reshape(3*len(spatial_index_values.htm))
-            intmat = spatial_index_values.intmat.data
-        else:
+        if not isinstance(spatial_index_values,xarray.Dataset):
             # Calculate vertices and interconnection matrix
-            lons, lats, intmat = pystare.triangulate_indices(spatial_index_values)
+            spatial_index_values = make_stare_htm_info_from_sivs(spatial_index_values)
+            # lons, lats, intmat = pystare.triangulate_indices(spatial_index_values)
+
+        lons = spatial_index_values.lons.data.reshape(3*len(spatial_index_values.htm))
+        lats = spatial_index_values.lats.data.reshape(3*len(spatial_index_values.htm))
+        intmat = spatial_index_values.intmat.data
 
         # Make triangulation object & plot
         siv_triang = tri.Triangulation(lons, lats, intmat)
@@ -140,7 +177,7 @@ def hello_plot(spatial_index_values=None
         # Show figure now
         plt.show()
 
-    return figax
+    return figax,spatial_index_values
 
 def hex16(ival):
     return "0x%016x" % ival
@@ -275,10 +312,12 @@ class stare_prism(object):
         if tiv_mock is not None:
             self.tiv_plot = self.tiv_mock
         else:
+            if type(self.tiv) != numpy.ndarray:
+                self.tiv = numpy.array([self.tiv],dtype=numpy.int64)
             if tiv_representation == 'tai':
                 triple   = numpy.concatenate(pystare.to_temporal_triple_tai(self.tiv))
-                print(triple)
-                print(type(triple))
+                # print(triple)
+                # print(type(triple))
                 t_triple = pystare.to_JulianTAI(triple)
             elif tiv_representation =='ms': 
                 triple = numpy.concatenate(pystare.to_temporal_triple_ms(self.tiv))
@@ -321,11 +360,13 @@ class stare_prism(object):
               ,edge_color = None
               ,prism_edge_color = None
               ,end_faces_plot = None
+              ,rasterized = None
              ):
         
         alpha               = (0.5 if alpha is None else alpha)
         edge_alpha          = (1 if edge_alpha is None else edge_alpha)
         end_faces_plot = ([True]*6 if end_faces_plot is None else end_faces_plot)
+        rasterized = False if rasterized is None else rasterized
         
         self.plot0(figax
                    ,color = self.color
@@ -335,6 +376,7 @@ class stare_prism(object):
                    ,edge_alpha = edge_alpha                   
                    ,z=[self.tiv_plot[0],self.tiv_plot[-1]]
                    ,end_faces_plot = [end_faces_plot[0],end_faces_plot[-1]]
+                   ,rasterized=rasterized
                   )
 
         return figax
@@ -346,10 +388,12 @@ class stare_prism(object):
               ,edge_color = None
               ,prism_edge_color = None
               ,end_faces_plot = None
+              ,rasterized = None
              ):
         
         alpha               = (0.5 if alpha is None else alpha)
         edge_alpha          = (0.5 if edge_alpha is None else alpha)
+        rasterized = False if rasterized is None else rasterized        
         
         end_faces_plot = ([True]*6 if end_faces_plot is None else end_faces_plot)
         
@@ -393,6 +437,7 @@ class stare_prism(object):
              ,edge_alpha=None
              ,end_faces_plot = None
              ,dbg=None
+             ,rasterized=None
             ):
         
         z          = ([0.0,1.0] if z is None else z)
@@ -403,6 +448,7 @@ class stare_prism(object):
         edge_alpha = (1.0 if edge_alpha is None else edge_alpha)
         end_faces_plot = ([True,True] if end_faces_plot is None else end_faces_plot)
         dbg        = (False if dbg is None else dbg)
+        rasterized = False if rasterized is None else rasterized        
         
         # z0=self.tiv_plot[0] # bad
         # temporal_scales = [self.tiv_plot[1]]*4
@@ -469,12 +515,14 @@ class stare_prism(object):
                 figax.ax.plot_trisurf(x,y,z
                                     ,color=color
                                     ,alpha=alpha
+                                    ,rasterized=rasterized
                                     )
             else:
                 # This is stupid
                  figax.ax.plot_trisurf(x,y,z
                                     ,color=color
                                     ,alpha=0
+                                    ,rasterized=rasterized
                                     )               
         
             if z1 is not None:
@@ -487,6 +535,7 @@ class stare_prism(object):
                         figax.ax.plot3D([x[i],x[i]],[y[i],y[i]],[z[i],z1[i]]
                                         ,c=prism_edge_color
                                         ,alpha=edge_alpha
+                                        ,rasterized=rasterized
                                        )                
                 
                 for i in [0,1,2]:
@@ -535,11 +584,15 @@ class stare_prism(object):
                     figax.ax.plot3D(x, y, z
                         ,c=prism_edge_color
                         ,alpha=edge_alpha
+                        ,rasterized=rasterized
                         ) 
                 
             if end_faces_plot[1]:
                 if prism_edge_color is not None:                    
-                    figax.ax.plot3D(x, y, z1, c=prism_edge_color, alpha=edge_alpha) 
-                figax.ax.plot_trisurf(x,y,z1,color=color,alpha=alpha)
-
+                    figax.ax.plot3D(x, y, z1, c=prism_edge_color, alpha=edge_alpha
+                                    ,rasterized=rasterized
+                                    ) 
+                figax.ax.plot_trisurf(x,y,z1,color=color,alpha=alpha
+                                      ,rasterized=rasterized
+                                      )
         return figax
