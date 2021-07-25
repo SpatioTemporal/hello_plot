@@ -163,6 +163,7 @@ def hello_plot(spatial_index_values=None
                , face_shading    = None
                , face_alpha      = None
                , siv_triang      = None
+               , triplot         = None
               ):
     
     spatial_index_values = (None if spatial_index_values is None else spatial_index_values)
@@ -189,6 +190,7 @@ def hello_plot(spatial_index_values=None
     face_cmap       = None if face_cmap is None else face_cmap
     face_shading    = 'gouraud' if face_shading is None else face_shading
     face_alpha      = 0.75 if face_alpha is None else face_alpha
+    triplot = True if triplot is None else triplot
 
     siv_triang = None if siv_triang is None else siv_triang
     
@@ -216,28 +218,47 @@ def hello_plot(spatial_index_values=None
             siv_triang = tri.Triangulation(lons, lats, intmat)
 
         divert_stderr()
-        if use_dash is not None:
-            figax.ax.triplot(siv_triang, c=color, transform=plot_options['transform'], lw=lw,
-                             label="Placeholder", dashes=use_dash, rasterized=rasterized)            
-        else:
-            figax.ax.triplot(siv_triang, c=color, transform=plot_options['transform'], lw=lw, 
-                             label="Placeholder", rasterized=rasterized)
+        if triplot:
+            if use_dash is not None:
+                figax.ax.triplot(siv_triang, c=color, transform=plot_options['transform'], lw=lw,
+                                 label="Placeholder", dashes=use_dash, rasterized=rasterized)            
+            else:
+                figax.ax.triplot(siv_triang, c=color, transform=plot_options['transform'], lw=lw, 
+                                 label="Placeholder", rasterized=rasterized)
             
         if face_zs is not None:
-            print('face_zs         ',face_zs)
-#            print('face_colors     ',face_colors)
-            print('face_edgecolors ',face_edgecolors)
-            print('face_lw         ',face_lw)
-            print('face_shading    ',face_shading)
-            print('face_vmin       ',face_vmin)
-            print('face_vmax       ',face_vmax)
-            print('face_cmap       ',face_cmap)
-            print('face_alpha      ',face_alpha)
-            print('po transform    ',plot_options['transform'])
-            print('rasterized      ',rasterized)
+            if verbose:
+                print('face_zs         ',face_zs)
+                #            print('face_colors     ',face_colors)
+                print('face_edgecolors ',face_edgecolors)
+                print('face_lw         ',face_lw)
+                print('face_shading    ',face_shading)
+                print('face_vmin       ',face_vmin)
+                print('face_vmax       ',face_vmax)
+                print('face_cmap       ',face_cmap)
+                print('face_alpha      ',face_alpha)
+                print('po transform    ',plot_options['transform'])
+                print('rasterized      ',rasterized)
+
+            if len(face_zs) == len(siv_triang.x):
+                if verbose:
+                    print('face_zs no change')
+                face_zs_input = face_zs
+            else:
+                if verbose:
+                    print('face_zs tripling')
+                face_zs_input = numpy.zeros(face_zs.size,dtype=face_zs.dtype)
+                for i in range(face_zs.size):
+                    face_zs_input[3*i+0] = face_zs[i]
+                    face_zs_input[3*i+1] = face_zs[i]
+                    face_zs_input[3*i+2] = face_zs[i]
+
+            if verbose:
+                print('siv_triang len: ',len(siv_triang.x))
+                print('face_zs    len: ',len(face_zs_input))
             
             figax.ax.tripcolor(siv_triang
-                               ,face_zs
+                               ,face_zs_input
 #                               ,face_colors=face_colors
                                ,edgecolors=face_edgecolors
                                ,lw=face_lw
