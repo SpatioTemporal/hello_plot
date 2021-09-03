@@ -50,7 +50,7 @@ def make_stare_htm_info_from_sivs(sivs,dask=None):
         ,attrs = {
             "creator"          : "make_stare_htm_info_at_level v1"
             ,"datetime"        : tiv
-            ,"datetime_string" : numpy.array(pystare.to_utc_approximate(tiv),dtype='datetime64[ms]')
+            ,"datetime_string" : numpy.array(pystare.core._to_utc_approximate(tiv),dtype='datetime64[ms]')
         }
     )
 
