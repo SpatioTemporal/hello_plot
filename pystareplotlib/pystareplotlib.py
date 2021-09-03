@@ -40,7 +40,7 @@ def make_stare_htm_info_from_sivs(sivs,dask=None):
     lats = xarray.DataArray(data1.data[()][1].reshape(len(htm),3),dims=("htm","vertex"),coords={"htm": sivs})
     intmat = xarray.DataArray(data1.data[()][2],dims=("htm","vertex"),coords={"htm": sivs})
 
-    tiv = pystare.current_datetime()
+    tiv = pystare.now()
     return xarray.Dataset(
         {
             "lons"     : lons
