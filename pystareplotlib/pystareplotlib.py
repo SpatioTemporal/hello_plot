@@ -24,8 +24,18 @@ from datetime import datetime
 # Some helper functions for plotting & printing.
 
 
+def make_all_stare_htm_at_level(level=None):
+    "Make an xarray DataArraywith all of the STARE htm-ids at a level."
+    level = ( 1 if level is None else level )
+    level_increment = pystare.spatial_increment_from_level(level)
+    n_trixels       = 8 * (4 ** level)
+    r_              = numpy.arange(n_trixels)
+    r_trixels       = r_ * level_increment+level
+    htm = xarray.DataArray(r_, dims=("htm"),coords={"htm": r_trixels})
+    return htm
+
 def make_stare_htm_info_from_sivs(sivs,dask=None):
-    "Make an xarray with all of the STARE htm-ids"
+    "Make an xarray DataSet with all of the STARE htm-ids"
     dask  = ( 'allowed' if dask is None else dask )
     htm = xarray.DataArray(numpy.arange(len(sivs)), dims=("htm"),coords={"htm": sivs})
 
@@ -40,7 +50,7 @@ def make_stare_htm_info_from_sivs(sivs,dask=None):
     lats = xarray.DataArray(data1.data[()][1].reshape(len(htm),3),dims=("htm","vertex"),coords={"htm": sivs})
     intmat = xarray.DataArray(data1.data[()][2],dims=("htm","vertex"),coords={"htm": sivs})
 
-    tiv = pystare.current_datetime()
+    tiv = pystare.temporal.now()
     return xarray.Dataset(
         {
             "lons"     : lons

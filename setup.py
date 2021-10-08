@@ -20,7 +20,7 @@ data_files = []
 
 setup(
     name="pystareplotlib",
-    version='0.1.0',
+    version='0.2.0',
     description="STARE Hello World Plotting",
     license="MIT",
     author="Michael Rilee",
