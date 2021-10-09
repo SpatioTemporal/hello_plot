@@ -8,6 +8,9 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.tri as tri
 
+from matplotlib.colors import ListedColormap
+import matplotlib.cm as cm
+
 import meshplot as mp
 import mpl_toolkits.mplot3d as a3
 
@@ -60,7 +63,7 @@ def make_stare_htm_info_from_sivs(sivs,dask=None):
         ,attrs = {
             "creator"          : "make_stare_htm_info_at_level v1"
             ,"datetime"        : tiv
-            ,"datetime_string" : numpy.array(pystare.to_utc_approximate(tiv),dtype='datetime64[ms]')
+            ,"datetime_string" : numpy.array(pystare.to_ms_since_epoch_utc([tiv]),dtype='datetime64[ms]')
         }
     )
 
@@ -174,6 +177,11 @@ def hello_plot(spatial_index_values=None
                , face_alpha      = None
                , siv_triang      = None
               ):
+    """
+    A STARE-aware visualizer that was originally intended to be a simple way to help beginners get started.
+    """
+
+    # Note we conflate two transforms here. One for the figure and the one for plotting. All should be Geodetic...
     
     spatial_index_values = (None if spatial_index_values is None else spatial_index_values)
     figax = (None if figax is None else figax)
@@ -234,30 +242,59 @@ def hello_plot(spatial_index_values=None
                              label="Placeholder", rasterized=rasterized)
             
         if face_zs is not None:
-            print('face_zs         ',face_zs)
+            if verbose:
+                print('face_zs            ',face_zs)
+                print('face_zs len        ',len(face_zs))
+                print('siv_triang tri len ',siv_triang.triangles.shape)
 #            print('face_colors     ',face_colors)
-            print('face_edgecolors ',face_edgecolors)
-            print('face_lw         ',face_lw)
-            print('face_shading    ',face_shading)
-            print('face_vmin       ',face_vmin)
-            print('face_vmax       ',face_vmax)
-            print('face_cmap       ',face_cmap)
-            print('face_alpha      ',face_alpha)
-            print('po transform    ',plot_options['transform'])
-            print('rasterized      ',rasterized)
+                print('face_edgecolors ',face_edgecolors)
+                print('face_lw         ',face_lw)
+                print('face_shading    ',face_shading)
+                print('face_vmin       ',face_vmin)
+                print('face_vmax       ',face_vmax)
+                print('face_cmap       ',face_cmap)
+                print('face_alpha      ',face_alpha)
+                print('po transform    ',plot_options['transform'])
+                print('rasterized      ',rasterized)
+
+            if face_cmap is not None:
+                norm = mpl.colors.Normalize(vmin=face_vmin, vmax=face_vmax)
+                m=cm.ScalarMappable(norm=norm,cmap=face_cmap)
+                face_c=[mpl.colors.rgb2hex(m.to_rgba(z)) for z in face_zs]
+            else:
+                face_c=face_zs
+            for i in range(len(siv_triang.triangles)):
+                t = siv_triang.triangles[i]
+
+                if verbose:
+                    print('fill: ',i,t,siv_triang.x[t],siv_triang.y[t])
+                    print('colo: ',face_c[i])
+    
+                figax.ax.fill(siv_triang.x[t]
+                              ,siv_triang.y[t]
+                              ,face_c[i]
+                              ,transform=plot_options['transform']
+#                              ,transform=ccrs.Geodetic()
+                              ,alpha=face_alpha
+                              ,rasterized=rasterized
+                             )
             
-            figax.ax.tripcolor(siv_triang
-                               ,face_zs
-#                               ,face_colors=face_colors
-                               ,edgecolors=face_edgecolors
-                               ,lw=face_lw
-                               ,shading=face_shading
-                               ,vmin=face_vmin
-                               ,vmax=face_vmax
-                               ,cmap=face_cmap
-                               ,alpha=face_alpha
-                               ,transform=plot_options['transform']
-                               ,rasterized=rasterized)
+## Doesn't work.
+#            figax.ax.tripcolor(siv_triang
+#                               ,face_zs
+##                               ,face_colors=face_colors
+#                               ,edgecolors=face_edgecolors
+#                               ,lw=face_lw
+#                               ,shading=face_shading
+#                               ,vmin=face_vmin
+#                               ,vmax=face_vmax
+#                               ,cmap=face_cmap
+#                               ,alpha=face_alpha
+##                               ,transform=plot_options['transform']
+#                               ,transform=ccrs.PlateCarree()
+#                               ,rasterized=rasterized
+#                               ,antialiased=True
+#                               )
 
         restore_stderr(_verbose=verbose)
  
