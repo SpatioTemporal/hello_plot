@@ -433,13 +433,18 @@ class stare_prism(object):
                 triple   = numpy.concatenate(pystare.to_temporal_triple_tai(self.tiv))
                 # print(triple)
                 # print(type(triple))
-                t_triple = pystare.to_JulianTAI(triple)
+                #old t_triple = pystare.to_JulianTAI(triple)
+                t_triple = pystare.to_julian_date(triple,'tai')
+
             elif tiv_representation =='ms': 
                 triple = numpy.concatenate(pystare.to_temporal_triple_ms(self.tiv))
-                t_triple = pystare.to_JulianTAI(triple)
+                #old t_triple = pystare.to_JulianTAI(triple)
+                t_triple = pystare.to_julian_date(triple,'tai')
+                
             else: # 'ms-utc'
                 triple = numpy.concatenate(pystare.to_temporal_triple_ms(self.tiv))
-                t_triple = pystare.to_JulianUTC(triple)
+                #old t_triple = pystare.to_JulianUTC(triple)
+                t_triple = pystare.to_julian_date(triple,'utc')
     
             self.t_lo = ( t_triple[0][0] + t_triple[1][0] ) / tiv_scale + tiv_offset
             self.t_mi = ( t_triple[0][1] + t_triple[1][1] ) / tiv_scale + tiv_offset
