@@ -4,7 +4,11 @@ Basic python-based visualization for the [Spatio Temporal Adaptive Resolution En
 
 Contact: [Michael Rilee](mike@rilee.net), Rilee Systems Technologies LLC.
 
-# Dependencies
+# Introduction
+
+# Installation
+
+## Dependencies
 
 This package depends on several packages that may not be in PyPI.
 
@@ -12,6 +16,10 @@ This package depends on several packages that may not be in PyPI.
 * meshplot
 
 Conda-forge should work for installing these.
+
+## PyPI Installation
+
+`pip install pystareplotlib`
 
 # Acknowledgment
 
