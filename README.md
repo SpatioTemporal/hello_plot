@@ -6,7 +6,11 @@ Contact: [Michael Rilee](mike@rilee.net), Rilee Systems Technologies LLC.
 
 # Introduction
 
+`pystareplotlib` is a Python module aiding the visualization of STARE indexed data and objects.
+
 # Installation
+
+We use conda and conda-forge to set up our development environment and then use PyPI to install pystareplotlib itself.
 
 ## Dependencies
 
